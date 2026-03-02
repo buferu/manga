@@ -1,0 +1,2726 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AspectLens — Анализатор Изображений</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-card-hover: #222240;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b8;
+            --text-muted: #6a6a80;
+            --accent: #6c5ce7;
+            --accent-light: #a29bfe;
+            --accent-dark: #4a3db8;
+            --gradient-1: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            --gradient-2: linear-gradient(135deg, #fd79a8, #e84393);
+            --gradient-3: linear-gradient(135deg, #00b894, #00cec9);
+            --gradient-4: linear-gradient(135deg, #fdcb6e, #e17055);
+            --border: #2a2a45;
+            --shadow: 0 20px 60px rgba(0,0,0,0.5);
+            --shadow-sm: 0 4px 15px rgba(0,0,0,0.3);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f0f2f5;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f8f9fa;
+            --text-primary: #1a1a2e;
+            --text-secondary: #555570;
+            --text-muted: #8888a0;
+            --border: #e0e0e8;
+            --shadow: 0 20px 60px rgba(0,0,0,0.08);
+            --shadow-sm: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: var(--transition);
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            animation: float 20s infinite ease-in-out;
+        }
+
+        .bg-orb:nth-child(1) {
+            width: 600px; height: 600px;
+            background: #6c5ce7;
+            top: -200px; left: -100px;
+            animation-delay: 0s;
+        }
+
+        .bg-orb:nth-child(2) {
+            width: 500px; height: 500px;
+            background: #e84393;
+            bottom: -200px; right: -100px;
+            animation-delay: -7s;
+        }
+
+        .bg-orb:nth-child(3) {
+            width: 400px; height: 400px;
+            background: #00cec9;
+            top: 50%; left: 50%;
+            animation-delay: -14s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(100px, -50px) scale(1.1); }
+            50% { transform: translate(-50px, 100px) scale(0.9); }
+            75% { transform: translate(80px, 50px) scale(1.05); }
+        }
+
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            transition: var(--transition);
+        }
+
+        [data-theme="light"] .header {
+            background: rgba(255, 255, 255, 0.85);
+        }
+
+        .header-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 40px; height: 40px;
+            background: var(--gradient-1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            -webkit-text-fill-color: white;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-icon {
+            width: 42px; height: 42px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.2rem;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(108, 92, 231, 0.5);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(238, 90, 36, 0.4);
+        }
+
+        .btn-success {
+            background: var(--gradient-3);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 206, 201, 0.4);
+        }
+
+        /* Main Content */
+        .main {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 3rem 0 2rem;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero h1 span {
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-item .num {
+            font-weight: 700;
+            color: var(--accent-light);
+        }
+
+        /* Upload Zone */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: var(--bg-card);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--gradient-1);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+        }
+
+        .upload-zone:hover::before, .upload-zone.dragover::before {
+            opacity: 0.05;
+        }
+
+        .upload-zone .icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            display: block;
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-zone h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-zone p {
+            color: var(--text-muted);
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-zone .formats {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .format-tag {
+            padding: 4px 12px;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Results Container */
+        .results-container {
+            display: none;
+            animation: slideUp 0.6s ease;
+        }
+
+        .results-container.active {
+            display: block;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        /* Image Preview */
+        .image-preview-container {
+            position: relative;
+            width: 100%;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+        }
+
+        .image-preview-container img {
+            max-width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .image-overlay {
+            position: absolute;
+            inset: 0;
+            border: 3px dashed rgba(108, 92, 231, 0.5);
+            pointer-events: none;
+            display: none;
+        }
+
+        /* Aspect Ratio Display */
+        .ratio-display {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .ratio-big {
+            font-size: 4rem;
+            font-weight: 900;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .ratio-label {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .ratio-accuracy {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(0, 206, 201, 0.1);
+            border: 1px solid rgba(0, 206, 201, 0.3);
+            border-radius: 50px;
+            color: #00cec9;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .ratio-visual {
+            width: 100%;
+            max-width: 200px;
+            margin: 1.5rem auto;
+            aspect-ratio: var(--ratio, 1);
+            background: var(--gradient-1);
+            border-radius: 8px;
+            opacity: 0.3;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .ratio-visual::after {
+            content: attr(data-ratio);
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .ratio-visual:hover {
+            opacity: 0.6;
+        }
+
+        .ratio-visual:hover::after {
+            opacity: 1;
+        }
+
+        /* Info Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .info-item {
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+
+        .info-item .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .info-item .value {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        /* Aspect Ratio Cards */
+        .ratio-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .ratio-card {
+            padding: 12px;
+            text-align: center;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ratio-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .ratio-card.active {
+            border-color: var(--accent);
+            background: rgba(108, 92, 231, 0.1);
+        }
+
+        .ratio-card.active::before {
+            content: '✓';
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            font-weight: 700;
+        }
+
+        .ratio-card .ratio-mini {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ratio-card .ratio-mini-box {
+            background: var(--gradient-1);
+            border-radius: 3px;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .ratio-card .ratio-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .ratio-card .ratio-diff {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Color Palette */
+        .color-palette {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 50px;
+            height: 50px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition);
+            border: 2px solid transparent;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.15);
+            border-color: var(--text-primary);
+        }
+
+        .color-swatch .color-hex {
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .color-swatch:hover .color-hex {
+            opacity: 1;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 8px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+
+        /* Histogram */
+        .histogram {
+            display: flex;
+            align-items: flex-end;
+            gap: 1px;
+            height: 80px;
+            margin-top: 1rem;
+        }
+
+        .histogram-bar {
+            flex: 1;
+            border-radius: 2px 2px 0 0;
+            min-width: 2px;
+            transition: var(--transition);
+            opacity: 0.7;
+        }
+
+        .histogram-bar:hover {
+            opacity: 1;
+        }
+
+        /* Crop Preview */
+        .crop-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 1rem;
+        }
+
+        .crop-btn {
+            padding: 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: var(--transition);
+            text-align: center;
+        }
+
+        .crop-btn:hover {
+            border-color: var(--accent);
+            background: rgba(108, 92, 231, 0.1);
+        }
+
+        .crop-btn.selected {
+            border-color: var(--accent);
+            background: rgba(108, 92, 231, 0.15);
+            color: var(--accent-light);
+        }
+
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th, .data-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        .data-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table td {
+            font-weight: 500;
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            animation: toastIn 0.4s ease, toastOut 0.4s ease 2.6s forwards;
+            backdrop-filter: blur(20px);
+            max-width: 350px;
+        }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(100px); }
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            max-width: 800px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 2rem;
+            animation: modalIn 0.4s ease;
+        }
+
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-close {
+            width: 36px; height: 36px;
+            border: none;
+            background: var(--bg-secondary);
+            border-radius: 50%;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover {
+            background: rgba(255,107,107,0.2);
+            color: #ff6b6b;
+        }
+
+        /* History */
+        .history-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .history-item:hover {
+            border-color: var(--accent);
+        }
+
+        .history-thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-info .name {
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 200px;
+        }
+
+        .history-info .meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .history-ratio {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--accent-light);
+        }
+
+        /* Canvas for crop */
+        .crop-canvas-container {
+            position: relative;
+            display: inline-block;
+            margin: 1rem auto;
+            max-width: 100%;
+        }
+
+        #cropCanvas {
+            max-width: 100%;
+            border-radius: var(--radius-sm);
+            display: block;
+        }
+
+        /* Comparison */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .comparison-item {
+            text-align: center;
+            padding: 16px 10px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+
+        .comparison-item:hover {
+            border-color: var(--accent);
+        }
+
+        .comparison-box {
+            width: 100%;
+            max-width: 100px;
+            margin: 0 auto 10px;
+            background: var(--gradient-1);
+            border-radius: 4px;
+            opacity: 0.6;
+        }
+
+        .comparison-label {
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .comparison-dims {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Export Report */
+        .report-preview {
+            background: white;
+            color: #333;
+            padding: 2rem;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Pixel Density */
+        .density-meter {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .density-bar {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .density-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: var(--gradient-3);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 1.5rem;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: var(--transition);
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            background: var(--gradient-1);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .grid-3 { grid-template-columns: 1fr 1fr; }
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            .main { padding: 1rem; }
+            .grid-3 { grid-template-columns: 1fr; }
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .info-grid { grid-template-columns: 1fr; }
+            .header-inner { padding: 0; }
+            .ratio-cards { grid-template-columns: repeat(3, 1fr); }
+            .crop-options { grid-template-columns: repeat(2, 1fr); }
+            .comparison-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 480px) {
+            .ratio-cards { grid-template-columns: repeat(2, 1fr); }
+            .stats-bar { gap: 0.5rem; }
+            .stat-item { font-size: 0.75rem; padding: 6px 12px; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent);
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Fullscreen image */
+        .fullscreen-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 300;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+        }
+
+        .fullscreen-overlay.active {
+            display: flex;
+        }
+
+        .fullscreen-overlay img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+        }
+
+        .toolbar-btn {
+            padding: 8px 14px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toolbar-btn:hover {
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+        }
+
+        /* Pixel info */
+        .pixel-info {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Resolution suggestions */
+        .suggestion-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .suggestion-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        .suggestion-item .platform {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .suggestion-item .dims {
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        .match-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .match-good { background: #00b894; }
+        .match-ok { background: #fdcb6e; }
+        .match-bad { background: #ff6b6b; }
+
+        /* Section divider */
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin: 2.5rem 0 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Multi-image strip */
+        .image-strip {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0;
+            margin-bottom: 1rem;
+        }
+
+        .strip-thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .strip-thumb.active {
+            border-color: var(--accent);
+        }
+
+        .strip-thumb:hover {
+            border-color: var(--accent-light);
+            transform: scale(1.05);
+        }
+
+        .strip-add {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            border: 2px dashed var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+
+        .strip-add:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Zoom controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 4px;
+            z-index: 5;
+        }
+
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            backdrop-filter: blur(10px);
+        }
+
+        .zoom-btn:hover {
+            background: rgba(108, 92, 231, 0.8);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 3rem 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+
+        /* Batch mode */
+        .batch-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .batch-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .batch-item:hover {
+            border-color: var(--accent);
+        }
+
+        .batch-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+
+        .batch-item .batch-info {
+            padding: 12px;
+        }
+
+        .batch-item .batch-ratio {
+            font-weight: 700;
+            color: var(--accent-light);
+        }
+
+        /* Ruler */
+        .ruler-container {
+            position: relative;
+            margin: 1rem 0;
+        }
+
+        .ruler {
+            display: flex;
+            align-items: stretch;
+            height: 40px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .ruler-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: white;
+            transition: var(--transition);
+        }
+
+        /* Keyboard shortcut hints */
+        .kbd {
+            display: inline-flex;
+            padding: 2px 6px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-family: monospace;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="bg-animation">
+        <div class="bg-orb"></div>
+        <div class="bg-orb"></div>
+        <div class="bg-orb"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <a href="#" class="logo">
+                <div class="logo-icon">◇</div>
+                AspectLens
+            </a>
+            <div class="header-actions">
+                <button class="btn-icon" onclick="openHistory()" title="История">📋</button>
+                <button class="btn-icon" onclick="openShortcuts()" title="Горячие клавиши">⌨️</button>
+                <button class="btn-icon" id="themeToggle" onclick="toggleTheme()" title="Сменить тему">🌙</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Hero -->
+        <section class="hero" id="heroSection">
+            <h1>Анализатор <span>Аспекта</span> Изображений</h1>
+            <p>Загрузите изображение и мгновенно определите его соотношение сторон, получите детальную аналитику и рекомендации</p>
+            <div class="stats-bar">
+                <div class="stat-item">🎯 <span class="num">14</span> форматов</div>
+                <div class="stat-item">⚡ Мгновенный анализ</div>
+                <div class="stat-item">🎨 Палитра цветов</div>
+                <div class="stat-item">📊 Полный отчёт</div>
+            </div>
+        </section>
+
+        <!-- Upload Zone -->
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+            <span class="icon">📤</span>
+            <h3>Перетащите изображение сюда</h3>
+            <p>или нажмите для выбора файла</p>
+            <div class="formats">
+                <span class="format-tag">PNG</span>
+                <span class="format-tag">JPG</span>
+                <span class="format-tag">JPEG</span>
+                <span class="format-tag">GIF</span>
+                <span class="format-tag">WEBP</span>
+                <span class="format-tag">BMP</span>
+                <span class="format-tag">SVG</span>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" multiple>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Анализируем изображение...</p>
+        </div>
+
+        <!-- Results -->
+        <div class="results-container" id="results">
+            <!-- Image Strip for multiple images -->
+            <div class="image-strip" id="imageStrip" style="display:none;"></div>
+
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" onclick="downloadImage()">💾 Сохранить</button>
+                    <button class="toolbar-btn" onclick="copyRatio()">📋 Копировать</button>
+                    <button class="toolbar-btn" onclick="openExportModal()">📄 Отчёт</button>
+                    <button class="toolbar-btn" onclick="viewFullscreen()">🔍 Полный экран</button>
+                </div>
+                <div class="toolbar-group">
+                    <button class="toolbar-btn" onclick="rotateImage()">🔄 Повернуть</button>
+                    <button class="toolbar-btn" onclick="flipImage()">↔️ Отразить</button>
+                </div>
+                <div style="flex:1"></div>
+                <button class="btn btn-danger" onclick="resetAll()" style="padding:8px 16px;font-size:0.8rem;">✕ Сбросить</button>
+            </div>
+
+            <!-- Main Grid -->
+            <div class="grid-2">
+                <!-- Image Preview -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">🖼️ Превью</span>
+                        <span class="card-badge" id="fileTypeBadge">PNG</span>
+                    </div>
+                    <div class="image-preview-container" id="imageContainer">
+                        <img id="previewImage" src="" alt="Preview">
+                        <div class="image-overlay" id="imageOverlay"></div>
+                        <div class="zoom-controls">
+                            <button class="zoom-btn" onclick="zoomIn()">+</button>
+                            <button class="zoom-btn" onclick="zoomOut()">−</button>
+                            <button class="zoom-btn" onclick="zoomReset()">⊡</button>
+                            <button class="zoom-btn" onclick="viewFullscreen()">⛶</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ratio Result -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">📐 Соотношение сторон</span>
+                    </div>
+                    <div class="ratio-display">
+                        <div class="ratio-big" id="ratioResult">—</div>
+                        <div class="ratio-label" id="ratioLabel">Загрузите изображение</div>
+                        <div class="ratio-accuracy" id="ratioAccuracy" style="display:none;">
+                            <span>🎯</span>
+                            <span id="accuracyText">100% совпадение</span>
+                        </div>
+                        <div class="ratio-visual" id="ratioVisual" style="display:none;"></div>
+                    </div>
+
+                    <!-- Image Info -->
+                    <div class="info-grid" id="infoGrid">
+                        <div class="info-item">
+                            <div class="label">Ширина</div>
+                            <div class="value" id="imgWidth">—</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">Высота</div>
+                            <div class="value" id="imgHeight">—</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">Мегапиксели</div>
+                            <div class="value" id="imgMegapixels">—</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">Размер файла</div>
+                            <div class="value" id="imgFileSize">—</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">Тип файла</div>
+                            <div class="value" id="imgFileType">—</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="label">Ориентация</div>
+                            <div class="value" id="imgOrientation">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab(this, 'tabRatios')">📊 Все соотношения</button>
+                <button class="tab" onclick="switchTab(this, 'tabPlatforms')">📱 Платформы</button>
+                <button class="tab" onclick="switchTab(this, 'tabColors')">🎨 Палитра</button>
+                <button class="tab" onclick="switchTab(this, 'tabCrop')">✂️ Кадрирование</button>
+                <button class="tab" onclick="switchTab(this, 'tabAnalysis')">📈 Анализ</button>
+                <button class="tab" onclick="switchTab(this, 'tabCompare')">🔄 Сравнение</button>
+            </div>
+
+            <!-- Tab: All Ratios -->
+            <div class="tab-content active" id="tabRatios">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">📊 Совместимость с форматами</span>
+                    </div>
+                    <div class="ratio-cards" id="ratioCards"></div>
+                </div>
+            </div>
+
+            <!-- Tab: Platforms -->
+            <div class="tab-content" id="tabPlatforms">
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">📱 Социальные сети</span>
+                        </div>
+                        <div class="suggestion-list" id="socialSuggestions"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">🖥️ Экраны и устройства</span>
+                        </div>
+                        <div class="suggestion-list" id="screenSuggestions"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Colors -->
+            <div class="tab-content" id="tabColors">
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">🎨 Доминантные цвета</span>
+                        </div>
+                        <div class="color-palette" id="colorPalette"></div>
+                        <div style="margin-top: 2rem;">
+                            <div class="card-title" style="margin-bottom: 0.5rem;">📊 Распределение цветов</div>
+                            <div class="histogram" id="colorHistogram"></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">📋 Цветовая информация</span>
+                        </div>
+                        <table class="data-table" id="colorTable">
+                            <thead>
+                                <tr>
+                                    <th>Цвет</th>
+                                    <th>HEX</th>
+                                    <th>RGB</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="colorTableBody"></tbody>
+                        </table>
+                        <div style="margin-top:1.5rem;">
+                            <div class="card-title" style="margin-bottom:0.5rem;">🌡️ Температура</div>
+                            <div class="ruler-container">
+                                <div class="ruler" id="tempRuler">
+                                    <div class="ruler-segment" id="coolSegment" style="background:linear-gradient(90deg,#4fc3f7,#29b6f6);">Холодные</div>
+                                    <div class="ruler-segment" id="neutralSegment" style="background:linear-gradient(90deg,#81c784,#66bb6a);">Нейтральные</div>
+                                    <div class="ruler-segment" id="warmSegment" style="background:linear-gradient(90deg,#ff8a65,#ef5350);">Тёплые</div>
+                                </div>
+                            </div>
+                            <div style="margin-top:1rem;">
+                                <div class="card-title" style="margin-bottom:0.5rem;">💡 Яркость</div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="brightnessFill" style="width:50%;background:var(--gradient-4);"></div>
+                                </div>
+                                <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);margin-top:4px;">
+                                    <span>Тёмное</span>
+                                    <span id="brightnessValue">50%</span>
+                                    <span>Светлое</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Crop -->
+            <div class="tab-content" id="tabCrop">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">✂️ Кадрирование под формат</span>
+                    </div>
+                    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1rem;">Выберите целевое соотношение сторон для кадрирования:</p>
+                    <div class="crop-options" id="cropOptions"></div>
+                    <div class="crop-canvas-container" style="text-align:center;margin-top:1.5rem;">
+                        <canvas id="cropCanvas" width="600" height="400"></canvas>
+                    </div>
+                    <div style="text-align:center;margin-top:1rem;">
+                        <button class="btn btn-primary" onclick="downloadCropped()">💾 Скачать кадрированное</button>
+                        <span id="cropDimensions" style="display:block;margin-top:0.5rem;font-size:0.8rem;color:var(--text-muted);"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Analysis -->
+            <div class="tab-content" id="tabAnalysis">
+                <div class="grid-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">📏 Плотность пикселей</span>
+                        </div>
+                        <div id="densityInfo">
+                            <div class="info-item" style="margin-bottom:8px;">
+                                <div class="label">Общее кол-во пикселей</div>
+                                <div class="value" id="totalPixels">—</div>
+                            </div>
+                            <div class="info-item" style="margin-bottom:8px;">
+                                <div class="label">Качество для печати (300 DPI)</div>
+                                <div class="value" id="printSize">—</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="label">Рекомендация</div>
+                                <div class="value" id="qualityRec" style="font-size:0.85rem;">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">📐 Геометрия</span>
+                        </div>
+                        <div>
+                            <div class="info-item" style="margin-bottom:8px;">
+                                <div class="label">Диагональ (px)</div>
+                                <div class="value" id="diagonal">—</div>
+                            </div>
+                            <div class="info-item" style="margin-bottom:8px;">
+                                <div class="label">Периметр (px)</div>
+                                <div class="value" id="perimeter">—</div>
+                            </div>
+                            <div class="info-item" style="margin-bottom:8px;">
+                                <div class="label">Площадь (px²)</div>
+                                <div class="value" id="area">—</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="label">Десятичное соотношение</div>
+                                <div class="value" id="decimalRatio">—</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">🔢 Масштабирование</span>
+                        </div>
+                        <div class="suggestion-list" id="scaleList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Compare -->
+            <div class="tab-content" id="tabCompare">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">🔄 Визуальное сравнение форматов</span>
+                    </div>
+                    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1rem;">Как ваше изображение будет выглядеть в разных форматах:</p>
+                    <div class="comparison-grid" id="comparisonGrid"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Fullscreen Overlay -->
+    <div class="fullscreen-overlay" id="fullscreenOverlay" onclick="closeFullscreen()">
+        <img id="fullscreenImage" src="" alt="Fullscreen">
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📋 История анализов</h2>
+                <button class="modal-close" onclick="closeHistory()">✕</button>
+            </div>
+            <div class="history-list" id="historyList">
+                <p style="text-align:center;color:var(--text-muted);padding:2rem;">История пуста. Загрузите изображение для начала.</p>
+            </div>
+            <div style="text-align:right;margin-top:1rem;">
+                <button class="btn btn-danger" onclick="clearHistory()" style="font-size:0.8rem;padding:8px 16px;">🗑️ Очистить историю</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📄 Экспорт отчёта</h2>
+                <button class="modal-close" onclick="closeExportModal()">✕</button>
+            </div>
+            <div id="exportContent"></div>
+            <div style="display:flex;gap:8px;margin-top:1.5rem;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="copyReport()">📋 Копировать текст</button>
+                <button class="btn btn-primary" onclick="downloadReport()">💾 Скачать TXT</button>
+                <button class="btn btn-success" onclick="downloadJSON()">📦 Скачать JSON</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shortcuts Modal -->
+    <div class="modal-overlay" id="shortcutsModal">
+        <div class="modal" style="max-width:500px;">
+            <div class="modal-header">
+                <h2>⌨️ Горячие клавиши</h2>
+                <button class="modal-close" onclick="closeShortcuts()">✕</button>
+            </div>
+            <table class="data-table">
+                <tbody>
+                    <tr><td><kbd class="kbd">Ctrl+V</kbd></td><td>Вставить изображение из буфера</td></tr>
+                    <tr><td><kbd class="kbd">Ctrl+O</kbd></td><td>Открыть файл</td></tr>
+                    <tr><td><kbd class="kbd">Ctrl+C</kbd></td><td>Копировать соотношение</td></tr>
+                    <tr><td><kbd class="kbd">Ctrl+S</kbd></td><td>Сохранить изображение</td></tr>
+                    <tr><td><kbd class="kbd">Ctrl+E</kbd></td><td>Экспорт отчёта</td></tr>
+                    <tr><td><kbd class="kbd">Ctrl+H</kbd></td><td>История</td></tr>
+                    <tr><td><kbd class="kbd">F</kbd></td><td>Полный экран</td></tr>
+                    <tr><td><kbd class="kbd">R</kbd></td><td>Повернуть</td></tr>
+                    <tr><td><kbd class="kbd">Escape</kbd></td><td>Закрыть / Сбросить</td></tr>
+                    <tr><td><kbd class="kbd">T</kbd></td><td>Сменить тему</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Hidden canvas for processing -->
+    <canvas id="processingCanvas" style="display:none;"></canvas>
+
+    <footer class="footer">
+        <p>AspectLens — Профессиональный анализатор изображений • Создано с ❤️</p>
+    </footer>
+
+    <script>
+        // ============ STATE ============
+        const state = {
+            images: [],
+            currentIndex: 0,
+            currentImage: null,
+            currentFile: null,
+            rotation: 0,
+            flipped: false,
+            zoom: 1,
+            selectedCropRatio: null,
+            history: JSON.parse(localStorage.getItem('aspectlens_history') || '[]')
+        };
+
+        const RATIOS = [
+            { name: '1:1', w: 1, h: 1 },
+            { name: '1:4', w: 1, h: 4 },
+            { name: '4:1', w: 4, h: 1 },
+            { name: '1:8', w: 1, h: 8 },
+            { name: '8:1', w: 8, h: 1 },
+            { name: '2:3', w: 2, h: 3 },
+            { name: '3:2', w: 3, h: 2 },
+            { name: '3:4', w: 3, h: 4 },
+            { name: '4:3', w: 4, h: 3 },
+            { name: '4:5', w: 4, h: 5 },
+            { name: '5:4', w: 5, h: 4 },
+            { name: '9:16', w: 9, h: 16 },
+            { name: '16:9', w: 16, h: 9 },
+            { name: '21:9', w: 21, h: 9 }
+        ];
+
+        const PLATFORMS = {
+            social: [
+                { name: 'Instagram Пост', ratio: '1:1', dims: '1080×1080', icon: '📸' },
+                { name: 'Instagram Story', ratio: '9:16', dims: '1080×1920', icon: '📱' },
+                { name: 'Instagram Reels', ratio: '9:16', dims: '1080×1920', icon: '🎬' },
+                { name: 'Facebook Пост', ratio: '16:9', dims: '1200×675', icon: '👤' },
+                { name: 'Facebook Обложка', ratio: '21:9', dims: '820×312', icon: '🖼️' },
+                { name: 'Twitter Пост', ratio: '16:9', dims: '1200×675', icon: '🐦' },
+                { name: 'YouTube Превью', ratio: '16:9', dims: '1280×720', icon: '▶️' },
+                { name: 'TikTok Видео', ratio: '9:16', dims: '1080×1920', icon: '🎵' },
+                { name: 'Pinterest Пин', ratio: '2:3', dims: '1000×1500', icon: '📌' },
+                { name: 'LinkedIn Баннер', ratio: '4:1', dims: '1584×396', icon: '💼' },
+                { name: 'Telegram Стикер', ratio: '1:1', dims: '512×512', icon: '✈️' },
+                { name: 'WhatsApp Статус', ratio: '9:16', dims: '1080×1920', icon: '💬' }
+            ],
+            screens: [
+                { name: 'Full HD', ratio: '16:9', dims: '1920×1080', icon: '🖥️' },
+                { name: '2K QHD', ratio: '16:9', dims: '2560×1440', icon: '🖥️' },
+                { name: '4K UHD', ratio: '16:9', dims: '3840×2160', icon: '🖥️' },
+                { name: 'Ultrawide', ratio: '21:9', dims: '2560×1080', icon: '🖥️' },
+                { name: 'iPhone 15', ratio: '9:16', dims: '1179×2556', icon: '📱' },
+                { name: 'iPad Pro', ratio: '3:4', dims: '2048×2732', icon: '📱' },
+                { name: 'MacBook Pro', ratio: '16:9', dims: '3024×1964', icon: '💻' },
+                { name: 'A4 Бумага', ratio: '3:4', dims: '2480×3508', icon: '📄' },
+                { name: 'Фото 10×15', ratio: '2:3', dims: '1200×1800', icon: '🖨️' },
+                { name: 'Кино (Scope)', ratio: '21:9', dims: '2560×1080', icon: '🎬' }
+            ]
+        };
+
+        // ============ INITIALIZATION ============
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+
+        // Drag & Drop
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // Paste from clipboard
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    handleFiles([file]);
+                    break;
+                }
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'o') { e.preventDefault(); fileInput.click(); }
+            if (e.ctrlKey && e.key === 'c' && state.currentImage) { e.preventDefault(); copyRatio(); }
+            if (e.ctrlKey && e.key === 's' && state.currentImage) { e.preventDefault(); downloadImage(); }
+            if (e.ctrlKey && e.key === 'e' && state.currentImage) { e.preventDefault(); openExportModal(); }
+            if (e.ctrlKey && e.key === 'h') { e.preventDefault(); openHistory(); }
+            if (e.key === 'f' && state.currentImage && !e.ctrlKey) { viewFullscreen(); }
+            if (e.key === 'r' && state.currentImage && !e.ctrlKey) { rotateImage(); }
+            if (e.key === 'Escape') {
+                closeFullscreen();
+                closeHistory();
+                closeExportModal();
+                closeShortcuts();
+            }
+            if (e.key === 't' && !e.ctrlKey) { toggleTheme(); }
+        });
+
+        // ============ FILE HANDLING ============
+        function handleFiles(files) {
+            if (!files || files.length === 0) return;
+
+            state.images = [];
+            for (let file of files) {
+                if (file.type.startsWith('image/')) {
+                    state.images.push(file);
+                }
+            }
+
+            if (state.images.length === 0) {
+                showToast('❌ Пожалуйста, загрузите файл изображения');
+                return;
+            }
+
+            state.currentIndex = 0;
+            showLoading();
+
+            setTimeout(() => {
+                processImage(state.images[0]);
+                if (state.images.length > 1) {
+                    buildImageStrip();
+                }
+            }, 600);
+        }
+
+        function processImage(file) {
+            state.currentFile = file;
+            state.rotation = 0;
+            state.flipped = false;
+            state.zoom = 1;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    state.currentImage = img;
+                    analyzeImage(img, file);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ============ ANALYSIS ============
+        function analyzeImage(img, file) {
+            const w = img.naturalWidth;
+            const h = img.naturalHeight;
+
+            // Find best matching ratio
+            const actualRatio = w / h;
+            let bestMatch = null;
+            let bestDiff = Infinity;
+
+            for (let r of RATIOS) {
+                const targetRatio = r.w / r.h;
+                const diff = Math.abs(actualRatio - targetRatio) / targetRatio;
+                if (diff < bestDiff) {
+                    bestDiff = diff;
+                    bestMatch = r;
+                }
+            }
+
+            const accuracy = Math.max(0, (1 - bestDiff) * 100).toFixed(1);
+
+            // Update UI
+            hideLoading();
+            document.getElementById('results').classList.add('active');
+            document.getElementById('heroSection').style.display = 'none';
+            document.getElementById('uploadZone').style.display = 'none';
+
+            // Preview
+            const previewImg = document.getElementById('previewImage');
+            previewImg.src = img.src;
+            previewImg.style.transform = '';
+
+            // Ratio
+            document.getElementById('ratioResult').textContent = bestMatch.name;
+            document.getElementById('ratioLabel').textContent = getRatioDescription(bestMatch.name);
+            document.getElementById('ratioAccuracy').style.display = 'inline-flex';
+            document.getElementById('accuracyText').textContent = `${accuracy}% совпадение`;
+
+            // Ratio visual
+            const ratioVisual = document.getElementById('ratioVisual');
+            ratioVisual.style.display = 'block';
+            const maxDim = 120;
+            const visualRatio = bestMatch.w / bestMatch.h;
+            let vw, vh;
+            if (visualRatio >= 1) {
+                vw = maxDim;
+                vh = maxDim / visualRatio;
+            } else {
+                vh = maxDim;
+                vw = maxDim * visualRatio;
+            }
+            ratioVisual.style.width = vw + 'px';
+            ratioVisual.style.height = vh + 'px';
+            ratioVisual.style.maxWidth = '100%';
+            ratioVisual.setAttribute('data-ratio', bestMatch.name);
+
+            // File info
+            document.getElementById('imgWidth').textContent = w.toLocaleString() + ' px';
+            document.getElementById('imgHeight').textContent = h.toLocaleString() + ' px';
+            document.getElementById('imgMegapixels').textContent = ((w * h) / 1000000).toFixed(2) + ' MP';
+            document.getElementById('imgFileSize').textContent = formatFileSize(file.size);
+            document.getElementById('imgFileType').textContent = file.type.split('/')[1].toUpperCase();
+            document.getElementById('fileTypeBadge').textContent = file.type.split('/')[1].toUpperCase();
+            document.getElementById('imgOrientation').textContent = w > h ? '🖼️ Альбомная' : (w < h ? '📱 Портретная' : '⬜ Квадратная');
+
+            // Build ratio cards
+            buildRatioCards(actualRatio, bestMatch.name);
+
+            // Build platform suggestions
+            buildPlatformSuggestions(bestMatch.name);
+
+            // Extract colors
+            extractColors(img);
+
+            // Build crop options
+            buildCropOptions(img, bestMatch);
+
+            // Build analysis
+            buildAnalysis(w, h, file, actualRatio);
+
+            // Build comparison
+            buildComparison(w, h);
+
+            // Add to history
+            addToHistory(file, bestMatch.name, w, h, accuracy);
+
+            showToast('✅ Анализ завершён: ' + bestMatch.name);
+        }
+
+        // ============ RATIO CARDS ============
+        function buildRatioCards(actualRatio, matchedName) {
+            const container = document.getElementById('ratioCards');
+            container.innerHTML = '';
+
+            const sorted = RATIOS.map(r => {
+                const targetRatio = r.w / r.h;
+                const diff = Math.abs(actualRatio - targetRatio) / targetRatio * 100;
+                return { ...r, diff };
+            }).sort((a, b) => a.diff - b.diff);
+
+            sorted.forEach(r => {
+                const card = document.createElement('div');
+                card.className = 'ratio-card' + (r.name === matchedName ? ' active' : '');
+                
+                const miniW = Math.min(36, 36 * (r.w / Math.max(r.w, r.h)));
+                const miniH = Math.min(36, 36 * (r.h / Math.max(r.w, r.h)));
+                
+                card.innerHTML = `
+                    <div class="ratio-mini">
+                        <div class="ratio-mini-box" style="width:${miniW}px;height:${miniH}px;"></div>
+                    </div>
+                    <div class="ratio-name">${r.name}</div>
+                    <div class="ratio-diff">${r.diff < 0.1 ? '✓ Точно' : (r.diff < 5 ? '≈ ' + r.diff.toFixed(1) + '%' : r.diff.toFixed(1) + '% откл.')}</div>
+                `;
+
+                card.addEventListener('click', () => {
+                    showToast(`📐 ${r.name} — Отклонение: ${r.diff.toFixed(2)}%`);
+                });
+
+                container.appendChild(card);
+            });
+        }
+
+        // ============ PLATFORM SUGGESTIONS ============
+        function buildPlatformSuggestions(matchedRatio) {
+            const socialContainer = document.getElementById('socialSuggestions');
+            const screenContainer = document.getElementById('screenSuggestions');
+
+            socialContainer.innerHTML = '';
+            screenContainer.innerHTML = '';
+
+            PLATFORMS.social.forEach(p => {
+                const match = p.ratio === matchedRatio;
+                socialContainer.innerHTML += `
+                    <div class="suggestion-item">
+                        <div class="platform">
+                            <div class="match-indicator ${match ? 'match-good' : (isClose(p.ratio, matchedRatio) ? 'match-ok' : 'match-bad')}"></div>
+                            <span>${p.icon} ${p.name}</span>
+                        </div>
+                        <div class="dims">${p.dims} (${p.ratio})</div>
+                    </div>
+                `;
+            });
+
+            PLATFORMS.screens.forEach(p => {
+                const match = p.ratio === matchedRatio;
+                screenContainer.innerHTML += `
+                    <div class="suggestion-item">
+                        <div class="platform">
+                            <div class="match-indicator ${match ? 'match-good' : (isClose(p.ratio, matchedRatio) ? 'match-ok' : 'match-bad')}"></div>
+                            <span>${p.icon} ${p.name}</span>
+                        </div>
+                        <div class="dims">${p.dims} (${p.ratio})</div>
+                    </div>
+                `;
+            });
+        }
+
+        function isClose(r1, r2) {
+            const parseRatio = r => { const [a, b] = r.split(':').map(Number); return a / b; };
+            return Math.abs(parseRatio(r1) - parseRatio(r2)) < 0.2;
+        }
+
+        // ============ COLOR EXTRACTION ============
+        function extractColors(img) {
+            const canvas = document.getElementById('processingCanvas');
+            const ctx = canvas.getContext('2d');
+            const maxDim = 200;
+            const scale = Math.min(maxDim / img.naturalWidth, maxDim / img.naturalHeight, 1);
+            canvas.width = img.naturalWidth * scale;
+            canvas.height = img.naturalHeight * scale;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Simple color quantization using k-means approximation
+            const colorMap = {};
+            let totalBrightness = 0;
+            let warmCount = 0, coolCount = 0, neutralCount = 0;
+
+            for (let i = 0; i < data.length; i += 16) {
+                const r = Math.round(data[i] / 32) * 32;
+                const g = Math.round(data[i + 1] / 32) * 32;
+                const b = Math.round(data[i + 2] / 32) * 32;
+                const key = `${r},${g},${b}`;
+                colorMap[key] = (colorMap[key] || 0) + 1;
+
+                const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                totalBrightness += brightness;
+
+                // Temperature
+                if (data[i] > data[i + 2] + 30) warmCount++;
+                else if (data[i + 2] > data[i] + 30) coolCount++;
+                else neutralCount++;
+            }
+
+            const totalSamples = data.length / 16;
+            const avgBrightness = (totalBrightness / totalSamples / 255 * 100).toFixed(0);
+
+            // Sort colors by frequency
+            const sortedColors = Object.entries(colorMap)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            const totalCount = sortedColors.reduce((s, c) => s + c[1], 0);
+
+            // Build palette
+            const paletteContainer = document.getElementById('colorPalette');
+            paletteContainer.innerHTML = '';
+
+            sortedColors.forEach(([color, count]) => {
+                const [r, g, b] = color.split(',').map(Number);
+                const hex = rgbToHex(r, g, b);
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.background = `rgb(${r},${g},${b})`;
+                swatch.innerHTML = `<span class="color-hex">${hex}</span>`;
+                swatch.onclick = () => {
+                    navigator.clipboard.writeText(hex);
+                    showToast(`🎨 Скопировано: ${hex}`);
+                };
+                paletteContainer.appendChild(swatch);
+            });
+
+            // Color table
+            const tableBody = document.getElementById('colorTableBody');
+            tableBody.innerHTML = '';
+            sortedColors.forEach(([color, count]) => {
+                const [r, g, b] = color.split(',').map(Number);
+                const hex = rgbToHex(r, g, b);
+                const pct = (count / totalCount * 100).toFixed(1);
+                tableBody.innerHTML += `
+                    <tr>
+                        <td><div style="width:20px;height:20px;border-radius:4px;background:rgb(${r},${g},${b});display:inline-block;vertical-align:middle;"></div></td>
+                        <td style="cursor:pointer;" onclick="navigator.clipboard.writeText('${hex}');showToast('📋 ${hex}')">${hex}</td>
+                        <td>${r}, ${g}, ${b}</td>
+                        <td>${pct}%</td>
+                    </tr>
+                `;
+            });
+
+            // Histogram
+            const histogram = document.getElementById('colorHistogram');
+            histogram.innerHTML = '';
+            const maxCount = sortedColors[0][1];
+            sortedColors.forEach(([color, count]) => {
+                const [r, g, b] = color.split(',').map(Number);
+                const height = (count / maxCount * 100);
+                const bar = document.createElement('div');
+                bar.className = 'histogram-bar';
+                bar.style.height = height + '%';
+                bar.style.background = `rgb(${r},${g},${b})`;
+                bar.style.flex = '1';
+                histogram.appendChild(bar);
+            });
+
+            // Temperature
+            const tempTotal = warmCount + coolCount + neutralCount;
+            document.getElementById('warmSegment').style.flex = warmCount / tempTotal;
+            document.getElementById('coolSegment').style.flex = coolCount / tempTotal;
+            document.getElementById('neutralSegment').style.flex = neutralCount / tempTotal;
+
+            // Brightness
+            document.getElementById('brightnessFill').style.width = avgBrightness + '%';
+            document.getElementById('brightnessValue').textContent = avgBrightness + '%';
+        }
+
+        function rgbToHex(r, g, b) {
+            return '#' + [r, g, b].map(x => Math.min(255, x).toString(16).padStart(2, '0')).join('');
+        }
+
+        // ============ CROP ============
+        function buildCropOptions(img, currentRatio) {
+            const container = document.getElementById('cropOptions');
+            container.innerHTML = '';
+
+            RATIOS.forEach(r => {
+                const btn = document.createElement('button');
+                btn.className = 'crop-btn' + (r.name === currentRatio.name ? ' selected' : '');
+                btn.textContent = r.name;
+                btn.onclick = () => {
+                    container.querySelectorAll('.crop-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    state.selectedCropRatio = r;
+                    drawCrop(img, r);
+                };
+                container.appendChild(btn);
+            });
+
+            state.selectedCropRatio = currentRatio;
+            drawCrop(img, currentRatio);
+        }
+
+        function drawCrop(img, ratio) {
+            const canvas = document.getElementById('cropCanvas');
+            const ctx = canvas.getContext('2d');
+
+            const targetRatio = ratio.w / ratio.h;
+            let cropW, cropH;
+
+            if (img.naturalWidth / img.naturalHeight > targetRatio) {
+                cropH = img.naturalHeight;
+                cropW = cropH * targetRatio;
+            } else {
+                cropW = img.naturalWidth;
+                cropH = cropW / targetRatio;
+            }
+
+            const sx = (img.naturalWidth - cropW) / 2;
+            const sy = (img.naturalHeight - cropH) / 2;
+
+            const maxDisplay = 600;
+            const displayScale = Math.min(maxDisplay / cropW, maxDisplay / cropH, 1);
+            canvas.width = cropW * displayScale;
+            canvas.height = cropH * displayScale;
+
+            ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+            document.getElementById('cropDimensions').textContent = 
+                `${Math.round(cropW)} × ${Math.round(cropH)} px (${ratio.name})`;
+        }
+
+        function downloadCropped() {
+            if (!state.currentImage || !state.selectedCropRatio) return;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = state.currentImage;
+            const ratio = state.selectedCropRatio;
+
+            const targetRatio = ratio.w / ratio.h;
+            let cropW, cropH;
+
+            if (img.naturalWidth / img.naturalHeight > targetRatio) {
+                cropH = img.naturalHeight;
+                cropW = cropH * targetRatio;
+            } else {
+                cropW = img.naturalWidth;
+                cropH = cropW / targetRatio;
+            }
+
+            const sx = (img.naturalWidth - cropW) / 2;
+            const sy = (img.naturalHeight - cropH) / 2;
+
+            canvas.width = cropW;
+            canvas.height = cropH;
+            ctx.drawImage(img, sx, sy, cropW, cropH, 0, 0, cropW, cropH);
+
+            canvas.toBlob(blob => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cropped_${ratio.name.replace(':', 'x')}_${Date.now()}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast('💾 Кадрированное изображение сохранено!');
+            });
+        }
+
+        // ============ ANALYSIS ============
+        function buildAnalysis(w, h, file, actualRatio) {
+            const totalPx = w * h;
+            document.getElementById('totalPixels').textContent = totalPx.toLocaleString();
+
+            const printW = (w / 300 * 2.54).toFixed(1);
+            const printH = (h / 300 * 2.54).toFixed(1);
+            document.getElementById('printSize').textContent = `${printW} × ${printH} см`;
+
+            const mp = totalPx / 1000000;
+            let rec;
+            if (mp >= 12) rec = '🟢 Отлично для печати крупного формата';
+            else if (mp >= 5) rec = '🟡 Хорошо для стандартной печати';
+            else if (mp >= 2) rec = '🟠 Подходит для веб и малой печати';
+            else rec = '🔴 Только для веб-использования';
+            document.getElementById('qualityRec').textContent = rec;
+
+            const diagonal = Math.sqrt(w * w + h * h).toFixed(0);
+            document.getElementById('diagonal').textContent = Number(diagonal).toLocaleString() + ' px';
+            document.getElementById('perimeter').textContent = ((w + h) * 2).toLocaleString() + ' px';
+            document.getElementById('area').textContent = totalPx.toLocaleString() + ' px²';
+            document.getElementById('decimalRatio').textContent = actualRatio.toFixed(4);
+
+            // Scale list
+            const scaleList = document.getElementById('scaleList');
+            scaleList.innerHTML = '';
+            [0.25, 0.5, 0.75, 1.5, 2, 3, 4].forEach(s => {
+                const sw = Math.round(w * s);
+                const sh = Math.round(h * s);
+                scaleList.innerHTML += `
+                    <div class="suggestion-item">
+                        <div class="platform">
+                            <span>${s < 1 ? '🔽' : '🔼'} ${s * 100}%</span>
+                        </div>
+                        <div class="dims">${sw.toLocaleString()} × ${sh.toLocaleString()}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ============ COMPARISON ============
+        function buildComparison(w, h) {
+            const container = document.getElementById('comparisonGrid');
+            container.innerHTML = '';
+
+            RATIOS.forEach(r => {
+                const ratio = r.w / r.h;
+                const maxSize = 80;
+                let bw, bh;
+                if (ratio >= 1) {
+                    bw = maxSize;
+                    bh = maxSize / ratio;
+                } else {
+                    bh = maxSize;
+                    bw = maxSize * ratio;
+                }
+
+                // Calc dimensions if we keep the larger dimension
+                let newW, newH;
+                if (w / h > ratio) {
+                    newH = h;
+                    newW = Math.round(h * ratio);
+                } else {
+                    newW = w;
+                    newH = Math.round(w / ratio);
+                }
+
+                container.innerHTML += `
+                    <div class="comparison-item">
+                        <div class="comparison-box" style="width:${bw}px;height:${bh}px;"></div>
+                        <div class="comparison-label">${r.name}</div>
+                        <div class="comparison-dims">${newW.toLocaleString()} × ${newH.toLocaleString()}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // ============ IMAGE STRIP ============
+        function buildImageStrip() {
+            const strip = document.getElementById('imageStrip');
+            strip.style.display = 'flex';
+            strip.innerHTML = '';
+
+            state.images.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const thumb = document.createElement('img');
+                    thumb.className = 'strip-thumb' + (index === state.currentIndex ? ' active' : '');
+                    thumb.src = e.target.result;
+                    thumb.onclick = () => {
+                        state.currentIndex = index;
+                        processImage(state.images[index]);
+                        strip.querySelectorAll('.strip-thumb').forEach(t => t.classList.remove('active'));
+                        thumb.classList.add('active');
+                    };
+                    strip.appendChild(thumb);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            const addBtn = document.createElement('div');
+            addBtn.className = 'strip-add';
+            addBtn.textContent = '+';
+            addBtn.onclick = () => fileInput.click();
+            strip.appendChild(addBtn);
+        }
+
+        // ============ HISTORY ============
+        function addToHistory(file, ratio, w, h, accuracy) {
+            const entry = {
+                name: file.name || 'Вставленное изображение',
+                ratio: ratio,
+                width: w,
+                height: h,
+                accuracy: accuracy,
+                size: formatFileSize(file.size),
+                date: new Date().toLocaleString('ru-RU'),
+                thumbnail: state.currentImage.src.substring(0, 200)
+            };
+
+            state.history.unshift(entry);
+            if (state.history.length > 50) state.history.pop();
+            localStorage.setItem('aspectlens_history', JSON.stringify(state.history));
+        }
+
+        function openHistory() {
+            document.getElementById('historyModal').classList.add('active');
+            const list = document.getElementById('historyList');
+
+            if (state.history.length === 0) {
+                list.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:2rem;">История пуста</p>';
+                return;
+            }
+
+            list.innerHTML = '';
+            state.history.forEach((entry, i) => {
+                list.innerHTML += `
+                    <div class="history-item">
+                        <div style="width:50px;height:50px;background:var(--bg-card);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">🖼️</div>
+                        <div class="history-info">
+                            <div class="name">${entry.name}</div>
+                            <div class="meta">${entry.width}×${entry.height} • ${entry.size} • ${entry.date}</div>
+                        </div>
+                        <div class="history-ratio">${entry.ratio}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function closeHistory() { document.getElementById('historyModal').classList.remove('active'); }
+        
+        function clearHistory() {
+            state.history = [];
+            localStorage.removeItem('aspectlens_history');
+            openHistory();
+            showToast('🗑️ История очищена');
+        }
+
+        // ============ EXPORT ============
+        function openExportModal() {
+            if (!state.currentImage) return;
+            document.getElementById('exportModal').classList.add('active');
+
+            const content = document.getElementById('exportContent');
+            const ratio = document.getElementById('ratioResult').textContent;
+            const w = state.currentImage.naturalWidth;
+            const h = state.currentImage.naturalHeight;
+
+            content.innerHTML = `
+                <div style="background:var(--bg-secondary);padding:1.5rem;border-radius:var(--radius-sm);border:1px solid var(--border);font-family:monospace;font-size:0.85rem;line-height:1.8;white-space:pre-wrap;" id="reportText">
+═══════════════════════════════════
+    ASPECTLENS — ОТЧЁТ АНАЛИЗА
+═══════════════════════════════════
+
+📐 Соотношение сторон: ${ratio}
+📏 Размеры: ${w} × ${h} px
+📊 Мегапиксели: ${((w * h) / 1000000).toFixed(2)} MP
+📁 Тип файла: ${state.currentFile?.type || 'N/A'}
+📦 Размер: ${formatFileSize(state.currentFile?.size || 0)}
+🧭 Ориентация: ${w > h ? 'Альбомная' : (w < h ? 'Портретная' : 'Квадратная')}
+
+📐 Геометрия:
+  • Диагональ: ${Math.sqrt(w * w + h * h).toFixed(0)} px
+  • Периметр: ${((w + h) * 2).toLocaleString()} px
+  • Площадь: ${(w * h).toLocaleString()} px²
+  • Десятичное: ${(w / h).toFixed(4)}
+
+🖨️ Печать (300 DPI):
+  • ${(w / 300 * 2.54).toFixed(1)} × ${(h / 300 * 2.54).toFixed(1)} см
+
+───────────────────────────────────
+  Сгенерировано: ${new Date().toLocaleString('ru-RU')}
+  AspectLens v1.0
+═══════════════════════════════════</div>
+            `;
+        }
+
+        function closeExportModal() { document.getElementById('exportModal').classList.remove('active'); }
+
+        function copyReport() {
+            const text = document.getElementById('reportText')?.textContent;
+            if (text) {
+                navigator.clipboard.writeText(text);
+                showToast('📋 Отчёт скопирован');
+            }
+        }
+
+        function downloadReport() {
+            const text = document.getElementById('reportText')?.textContent;
+            if (!text) return;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aspectlens_report_${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('💾 Отчёт сохранён');
+        }
+
+        function downloadJSON() {
+            if (!state.currentImage) return;
+            const w = state.currentImage.naturalWidth;
+            const h = state.currentImage.naturalHeight;
+            const data = {
+                ratio: document.getElementById('ratioResult').textContent,
+                width: w,
+                height: h,
+                megapixels: parseFloat(((w * h) / 1000000).toFixed(2)),
+                fileType: state.currentFile?.type,
+                fileSize: state.currentFile?.size,
+                orientation: w > h ? 'landscape' : (w < h ? 'portrait' : 'square'),
+                diagonal: parseFloat(Math.sqrt(w * w + h * h).toFixed(0)),
+                decimalRatio: parseFloat((w / h).toFixed(4)),
+                printSize: {
+                    widthCm: parseFloat((w / 300 * 2.54).toFixed(1)),
+                    heightCm: parseFloat((h / 300 * 2.54).toFixed(1))
+                },
+                generatedAt: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aspectlens_data_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📦 JSON сохранён');
+        }
+
+        // ============ SHORTCUTS MODAL ============
+        function openShortcuts() { document.getElementById('shortcutsModal').classList.add('active'); }
+        function closeShortcuts() { document.getElementById('shortcutsModal').classList.remove('active'); }
+
+        // ============ IMAGE TOOLS ============
+        function rotateImage() {
+            if (!state.currentImage) return;
+            state.rotation = (state.rotation + 90) % 360;
+            applyTransform();
+            showToast('🔄 Повёрнуто на 90°');
+        }
+
+        function flipImage() {
+            if (!state.currentImage) return;
+            state.flipped = !state.flipped;
+            applyTransform();
+            showToast('↔️ Изображение отражено');
+        }
+
+        function applyTransform() {
+            const img = document.getElementById('previewImage');
+            img.style.transform = `rotate(${state.rotation}deg) scaleX(${state.flipped ? -1 : 1}) scale(${state.zoom})`;
+        }
+
+        function zoomIn() {
+            state.zoom = Math.min(5, state.zoom + 0.25);
+            applyTransform();
+        }
+
+        function zoomOut() {
+            state.zoom = Math.max(0.25, state.zoom - 0.25);
+            applyTransform();
+        }
+
+        function zoomReset() {
+            state.zoom = 1;
+            applyTransform();
+        }
+
+        function viewFullscreen() {
+            if (!state.currentImage) return;
+            const overlay = document.getElementById('fullscreenOverlay');
+            document.getElementById('fullscreenImage').src = state.currentImage.src;
+            overlay.classList.add('active');
+        }
+
+        function closeFullscreen() {
+            document.getElementById('fullscreenOverlay').classList.remove('active');
+        }
+
+        function downloadImage() {
+            if (!state.currentImage) return;
+            const a = document.createElement('a');
+            a.href = state.currentImage.src;
+            a.download = state.currentFile?.name || `image_${Date.now()}.png`;
+            a.click();
+            showToast('💾 Изображение сохранено');
+        }
+
+        function copyRatio() {
+            const ratio = document.getElementById('ratioResult').textContent;
+            if (ratio && ratio !== '—') {
+                navigator.clipboard.writeText(ratio);
+                showToast('📋 Скопировано: ' + ratio);
+            }
+        }
+
+        // ============ UI HELPERS ============
+        function showLoading() {
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results').classList.remove('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+        }
+
+        function resetAll() {
+            state.currentImage = null;
+            state.currentFile = null;
+            state.rotation = 0;
+            state.flipped = false;
+            state.zoom = 1;
+            state.images = [];
+
+            document.getElementById('results').classList.remove('active');
+            document.getElementById('heroSection').style.display = '';
+            document.getElementById('uploadZone').style.display = '';
+            document.getElementById('imageStrip').style.display = 'none';
+            fileInput.value = '';
+            showToast('🔄 Сброшено');
+        }
+
+        function switchTab(btn, tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            document.getElementById('themeToggle').textContent = next === 'dark' ? '🌙' : '☀️';
+            localStorage.setItem('aspectlens_theme', next);
+            showToast(next === 'dark' ? '🌙 Тёмная тема' : '☀️ Светлая тема');
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+        }
+
+        function getRatioDescription(ratio) {
+            const descriptions = {
+                '1:1': 'Квадрат — Идеально для аватаров и Instagram',
+                '1:4': 'Узкий вертикальный баннер',
+                '4:1': 'Широкий горизонтальный баннер',
+                '1:8': 'Экстремально узкий вертикальный',
+                '8:1': 'Экстремально широкий горизонтальный',
+                '2:3': 'Классический портрет — Фото 10×15',
+                '3:2': 'Классический пейзаж — Стандартное фото',
+                '3:4': 'Портрет — iPad, фото 3:4',
+                '4:3': 'Стандартный формат — ТВ, мониторы',
+                '4:5': 'Портрет Instagram',
+                '5:4': 'Лёгкий пейзаж — 8×10 фото',
+                '9:16': 'Вертикальное видео — Stories, Reels',
+                '16:9': 'Широкоэкранный — Full HD, YouTube',
+                '21:9': 'Ультраширокий — Кино, UltraWide'
+            };
+            return descriptions[ratio] || 'Пользовательское соотношение';
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('aspectlens_theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.getElementById('themeToggle').textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+        }
+    </script>
+</body>
+</html>
